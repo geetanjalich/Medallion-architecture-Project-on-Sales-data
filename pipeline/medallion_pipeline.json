@@ -18,7 +18,7 @@
 					"source": {
 						"type": "AzureSqlSource",
 						"sqlReaderQuery": {
-							"value": "SELECT TABLE_NAME ,TABLE_SCHEMA\nFROM INFORMATION_SCHEMA.TABLES\nWHERE TABLE_TYPE = 'BASE TABLE' ",
+							"value": "SELECT TABLE_NAME ,TABLE_SCHEMA\nFROM INFORMATION_SCHEMA.TABLES\nWHERE TABLE_TYPE = 'BASE TABLE' and TABLE_SCHEMA='SalesLT'",
 							"type": "Expression"
 						},
 						"queryTimeout": "02:00:00",
@@ -137,6 +137,33 @@
 				"userProperties": [],
 				"typeProperties": {
 					"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/bronze to silver"
+				},
+				"linkedServiceName": {
+					"referenceName": "ls_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Notebook silver to gold",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Notebook bronze to silver",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/silver to gold"
 				},
 				"linkedServiceName": {
 					"referenceName": "ls_AzureDatabricks",
