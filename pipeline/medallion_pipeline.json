@@ -1,5 +1,5 @@
 {
-	"name": "pipeline1",
+	"name": "medallion_pipeline",
 	"properties": {
 		"activities": [
 			{
@@ -106,7 +106,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"filename": {
-											"value": "@{concat(item().TABLE_NAME, '.csv')}\n",
+											"value": "@{concat(item().TABLE_NAME,'.', 'csv')}",
 											"type": "Expression"
 										}
 									}
