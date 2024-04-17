@@ -108,6 +108,10 @@
 										"filename": {
 											"value": "@{concat(item().TABLE_NAME,'.', 'csv')}",
 											"type": "Expression"
+										},
+										"tablename": {
+											"value": "@item().TABLE_NAME",
+											"type": "Expression"
 										}
 									}
 								}

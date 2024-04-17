@@ -8,6 +8,9 @@
 		"parameters": {
 			"filename": {
 				"type": "string"
+			},
+			"tablename": {
+				"type": "String"
 			}
 		},
 		"annotations": [],
@@ -19,8 +22,11 @@
 					"value": "@dataset().filename",
 					"type": "Expression"
 				},
-				"folderPath": "bronze",
-				"fileSystem": "medallionlayers"
+				"folderPath": {
+					"value": "@dataset().tablename",
+					"type": "Expression"
+				},
+				"fileSystem": "raw"
 			},
 			"columnDelimiter": ",",
 			"escapeChar": "\\",
