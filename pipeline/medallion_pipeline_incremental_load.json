@@ -182,6 +182,55 @@
 									}
 								}
 							]
+						},
+						{
+							"name": "Lookup to update watermark table",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Copy data incrementally",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[dbo].[usp_write_watermark]",
+									"storedProcedureParameters": {
+										"LastModifiedtime": {
+											"type": "DateTime",
+											"value": {
+												"value": "@activity('Lookup get new watermarkvalue from table').output.value",
+												"type": "Expression"
+											}
+										},
+										"TableName": {
+											"type": "String",
+											"value": {
+												"value": "@item().TABLE_NAME",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "ds_AzureSqlTable",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": false
+							}
 						}
 					]
 				}
