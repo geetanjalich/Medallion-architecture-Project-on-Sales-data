@@ -26,7 +26,10 @@
 					"value": "@dataset().tablename",
 					"type": "Expression"
 				},
-				"fileSystem": "raw"
+				"fileSystem": {
+					"value": "@concat('medallionlayers','/','raw')",
+					"type": "Expression"
+				}
 			},
 			"columnDelimiter": ",",
 			"escapeChar": "\\",

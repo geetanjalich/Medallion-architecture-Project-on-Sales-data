@@ -121,7 +121,7 @@
 				}
 			},
 			{
-				"name": "Notebook bronze to silver",
+				"name": "full load raw to bronze",
 				"type": "DatabricksNotebook",
 				"dependsOn": [
 					{
@@ -140,7 +140,7 @@
 				},
 				"userProperties": [],
 				"typeProperties": {
-					"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/bronze to silver"
+					"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/full load raw to bronze"
 				},
 				"linkedServiceName": {
 					"referenceName": "ls_AzureDatabricks",
@@ -152,7 +152,7 @@
 				"type": "DatabricksNotebook",
 				"dependsOn": [
 					{
-						"activity": "Notebook bronze to silver",
+						"activity": "full load raw to bronze",
 						"dependencyConditions": [
 							"Succeeded"
 						]
