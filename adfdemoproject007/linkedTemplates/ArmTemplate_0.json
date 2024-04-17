@@ -110,6 +110,9 @@
 				"parameters": {
 					"filename": {
 						"type": "string"
+					},
+					"tablename": {
+						"type": "String"
 					}
 				},
 				"annotations": [],
@@ -121,8 +124,11 @@
 							"value": "@dataset().filename",
 							"type": "Expression"
 						},
-						"folderPath": "bronze",
-						"fileSystem": "medallionlayers"
+						"folderPath": {
+							"value": "@dataset().tablename",
+							"type": "Expression"
+						},
+						"fileSystem": "raw"
 					},
 					"columnDelimiter": ",",
 					"escapeChar": "\\",
@@ -136,7 +142,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/medallion_pipeline')]",
+			"name": "[concat(parameters('factoryName'), '/medallion_pipeline_full_load')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -157,7 +163,7 @@
 							"source": {
 								"type": "AzureSqlSource",
 								"sqlReaderQuery": {
-									"value": "SELECT TABLE_NAME ,TABLE_SCHEMA\nFROM INFORMATION_SCHEMA.TABLES\nWHERE TABLE_TYPE = 'BASE TABLE' and TABLE_SCHEMA='SalesLT'",
+									"value": "SELECT TABLE_NAME ,TABLE_SCHEMA\nFROM INFORMATION_SCHEMA.TABLES\nWHERE TABLE_TYPE = 'BASE TABLE' and TABLE_SCHEMA='SalesLT' and TABLE_NAME != 'watermark_table'",
 									"type": "Expression"
 								},
 								"queryTimeout": "02:00:00",
@@ -172,7 +178,7 @@
 						}
 					},
 					{
-						"name": "ForEach table name",
+						"name": "ForEach",
 						"type": "ForEach",
 						"dependsOn": [
 							{
@@ -191,7 +197,7 @@
 							"isSequential": true,
 							"activities": [
 								{
-									"name": "Copy data sql db to adlsgen2",
+									"name": "full loadCopy data sql db to adlsgen2_copy1_copy1",
 									"type": "Copy",
 									"dependsOn": [],
 									"policy": {
@@ -249,6 +255,10 @@
 												"filename": {
 													"value": "@{concat(item().TABLE_NAME,'.', 'csv')}",
 													"type": "Expression"
+												},
+												"tablename": {
+													"value": "@item().TABLE_NAME",
+													"type": "Expression"
 												}
 											}
 										}
@@ -262,7 +272,7 @@
 						"type": "DatabricksNotebook",
 						"dependsOn": [
 							{
-								"activity": "ForEach table name",
+								"activity": "ForEach",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -320,6 +330,265 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/ds_AzureSqlTable')]",
 				"[concat(variables('factoryId'), '/linkedServices/ls_AzureDatabricks')]",
+				"[concat(variables('factoryId'), '/datasets/ds_adls_delimitedtext')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/medallion_pipeline_incremental_load')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Lookup for tables names",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "SELECT TABLE_NAME ,TABLE_SCHEMA\nFROM INFORMATION_SCHEMA.TABLES\nWHERE TABLE_TYPE = 'BASE TABLE' and TABLE_SCHEMA='SalesLT' and TABLE_NAME != 'watermark_table'",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_AzureSqlTable",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEach table",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup for tables names",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Lookup for tables names').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "Lookup get old watermark value",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderQuery": {
+												"value": "select watermarkvalue from SalesLT.watermark_table where tablename = '@{item().TABLE_NAME}'",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "ds_AzureSqlTable",
+											"type": "DatasetReference",
+											"parameters": {}
+										},
+										"firstRowOnly": false
+									}
+								},
+								{
+									"name": "Lookup get new watermarkvalue from table",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderQuery": {
+												"value": "select max(ModifiedDate) from @{item().TABLE_SCHEMA}.@{item().TABLE_NAME}",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "ds_AzureSqlTable",
+											"type": "DatasetReference",
+											"parameters": {}
+										},
+										"firstRowOnly": false
+									}
+								},
+								{
+									"name": "Copy data incrementally",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Lookup get old watermark value",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										},
+										{
+											"activity": "Lookup get new watermarkvalue from table",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderQuery": {
+												"value": "select * from @{item().TABLE_SCHEMA}.@{item().TABLE_NAME} where '@{activity('Lookup get old watermark value').output}'< '@{activity('Lookup get new watermarkvalue from table').output.value}'",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_AzureSqlTable",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_adls_delimitedtext",
+											"type": "DatasetReference",
+											"parameters": {
+												"filename": {
+													"value": "@concat(item().TABLE_NAME,'.csv')",
+													"type": "Expression"
+												},
+												"tablename": {
+													"value": "@item().TABLE_NAME",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Lookup to update watermark table",
+									"type": "Lookup",
+									"dependsOn": [
+										{
+											"activity": "Copy data incrementally",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderStoredProcedureName": "[[dbo].[usp_write_watermark]",
+											"storedProcedureParameters": {
+												"LastModifiedtime": {
+													"type": "DateTime",
+													"value": {
+														"value": "@activity('Lookup get new watermarkvalue from table').output.value",
+														"type": "Expression"
+													}
+												},
+												"TableName": {
+													"type": "String",
+													"value": {
+														"value": "@item().TABLE_NAME",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "ds_AzureSqlTable",
+											"type": "DatasetReference",
+											"parameters": {}
+										},
+										"firstRowOnly": false
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_AzureSqlTable')]",
 				"[concat(variables('factoryId'), '/datasets/ds_adls_delimitedtext')]"
 			]
 		}
