@@ -73,15 +73,13 @@
 									"partitionOption": "None"
 								},
 								"sink": {
-									"type": "DelimitedTextSink",
+									"type": "ParquetSink",
 									"storeSettings": {
 										"type": "AzureBlobFSWriteSettings",
 										"copyBehavior": "PreserveHierarchy"
 									},
 									"formatSettings": {
-										"type": "DelimitedTextWriteSettings",
-										"quoteAllText": true,
-										"fileExtension": ".txt"
+										"type": "ParquetWriteSettings"
 									}
 								},
 								"enableStaging": false,
@@ -102,15 +100,11 @@
 							],
 							"outputs": [
 								{
-									"referenceName": "ds_adls_delimitedtext",
+									"referenceName": "ds_Parquet",
 									"type": "DatasetReference",
 									"parameters": {
 										"filename": {
-											"value": "@{concat(item().TABLE_NAME,'.', 'csv')}",
-											"type": "Expression"
-										},
-										"tablename": {
-											"value": "@item().TABLE_NAME",
+											"value": "@concat(item().TABLE_NAME,'.parquet')",
 											"type": "Expression"
 										}
 									}
