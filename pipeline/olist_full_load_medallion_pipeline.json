@@ -101,7 +101,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"file_name": {
-											"value": "@item().file_name",
+											"value": "@concat(item().filename,'.csv')",
 											"type": "Expression"
 										}
 									}
@@ -113,7 +113,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"filename": {
-											"value": "@item().file_name",
+											"value": "@concat(item().filename,'.parquet')",
 											"type": "Expression"
 										}
 									}
