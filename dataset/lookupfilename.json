@@ -1,0 +1,29 @@
+{
+	"name": "lookupfilename",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_AzureDataLakeStorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "lookup_filenames.csv",
+				"folderPath": "data",
+				"fileSystem": "medallionlayers"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "filename",
+				"type": "String"
+			}
+		]
+	}
+}

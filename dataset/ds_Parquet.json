@@ -19,11 +19,8 @@
 					"value": "@dataset().filename",
 					"type": "Expression"
 				},
-				"folderPath": "raw",
-				"fileSystem": {
-					"value": "@concat('medallionlayers','/data','/bronze')",
-					"type": "Expression"
-				}
+				"folderPath": "data/bronze",
+				"fileSystem": "medallionlayers"
 			},
 			"compressionCodec": "snappy"
 		},
