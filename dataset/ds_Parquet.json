@@ -20,7 +20,10 @@
 					"type": "Expression"
 				},
 				"folderPath": "raw",
-				"fileSystem": "medallionlayers"
+				"fileSystem": {
+					"value": "@concat('medallionlayers','/data','/bronze')",
+					"type": "Expression"
+				}
 			},
 			"compressionCodec": "snappy"
 		},
