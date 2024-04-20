@@ -19,7 +19,7 @@
 					"value": "@dataset().file_name",
 					"type": "Expression"
 				},
-				"folderPath": "data/raw",
+				"folderPath": "data/Landing",
 				"fileSystem": "medallionlayers"
 			},
 			"columnDelimiter": ",",
