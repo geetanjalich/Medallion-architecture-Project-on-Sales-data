@@ -292,7 +292,7 @@
 						}
 					},
 					{
-						"name": "ForEach file name",
+						"name": "copy files from Landing to bronze layer",
 						"type": "ForEach",
 						"dependsOn": [
 							{
@@ -337,7 +337,8 @@
 										"sink": {
 											"type": "ParquetSink",
 											"storeSettings": {
-												"type": "AzureBlobFSWriteSettings"
+												"type": "AzureBlobFSWriteSettings",
+												"copyBehavior": "FlattenHierarchy"
 											},
 											"formatSettings": {
 												"type": "ParquetWriteSettings"
@@ -382,38 +383,11 @@
 						}
 					},
 					{
-						"name": "raw to bronze layer",
-						"type": "DatabricksNotebook",
-						"dependsOn": [
-							{
-								"activity": "ForEach file name",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/raw to bronze"
-						},
-						"linkedServiceName": {
-							"referenceName": "ls_Databricks_Job_Cluster",
-							"type": "LinkedServiceReference"
-						}
-					},
-					{
 						"name": "bronze to silver layer",
 						"type": "DatabricksNotebook",
 						"dependsOn": [
 							{
-								"activity": "raw to bronze layer",
+								"activity": "copy files from Landing to bronze layer",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -431,7 +405,7 @@
 							"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/bronze to silver"
 						},
 						"linkedServiceName": {
-							"referenceName": "ls_Databricks_Job_Cluster",
+							"referenceName": "ls_AzureDatabricks",
 							"type": "LinkedServiceReference"
 						}
 					},
@@ -458,7 +432,7 @@
 							"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/silver to gold"
 						},
 						"linkedServiceName": {
-							"referenceName": "ls_Databricks_Job_Cluster",
+							"referenceName": "ls_AzureDatabricks",
 							"type": "LinkedServiceReference"
 						}
 					}
@@ -470,7 +444,7 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/lookupfilename')]",
-				"[concat(variables('factoryId'), '/linkedServices/ls_Databricks_Job_Cluster')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_AzureDatabricks')]",
 				"[concat(variables('factoryId'), '/datasets/ds_csv')]",
 				"[concat(variables('factoryId'), '/datasets/ds_Parquet')]"
 			]
