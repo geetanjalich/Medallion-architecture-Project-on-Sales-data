@@ -19,6 +19,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'ls_AzureSqlDatabase'"
 		},
+		"ls_Databricks_Job_Cluster_accessToken": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accessToken' of 'ls_Databricks_Job_Cluster'"
+		},
 		"ls_AzureDataLakeStorage_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://medallionarchsa.dfs.core.windows.net/"
@@ -33,13 +37,13 @@
 	},
 	"resources": [
 		{
-			"name": "[concat(parameters('factoryName'), '/medallion_pipeline_full_load')]",
+			"name": "[concat(parameters('factoryName'), '/olist_full_load_medallion_pipeline')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"activities": [
 					{
-						"name": "Lookup for tables names",
+						"name": "Lookup filenames",
 						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
@@ -52,16 +56,18 @@
 						"userProperties": [],
 						"typeProperties": {
 							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": {
-									"value": "SELECT TABLE_NAME ,TABLE_SCHEMA\nFROM INFORMATION_SCHEMA.TABLES\nWHERE TABLE_TYPE = 'BASE TABLE' and TABLE_SCHEMA='SalesLT' and TABLE_NAME != 'watermark_table'",
-									"type": "Expression"
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
 								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
 							},
 							"dataset": {
-								"referenceName": "ds_AzureSqlTable",
+								"referenceName": "lookupfilename",
 								"type": "DatasetReference",
 								"parameters": {}
 							},
@@ -69,11 +75,11 @@
 						}
 					},
 					{
-						"name": "ForEach",
+						"name": "ForEach file name",
 						"type": "ForEach",
 						"dependsOn": [
 							{
-								"activity": "Lookup for tables names",
+								"activity": "Lookup filenames",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -82,13 +88,13 @@
 						"userProperties": [],
 						"typeProperties": {
 							"items": {
-								"value": "@activity('Lookup for tables names').output.value",
+								"value": "@activity('Lookup filenames').output.value",
 								"type": "Expression"
 							},
 							"isSequential": true,
 							"activities": [
 								{
-									"name": "full loadCopy data sql db to adlsgen2_copy1_copy1",
+									"name": "Copy data adls raw to bronze layer",
 									"type": "Copy",
 									"dependsOn": [],
 									"policy": {
@@ -101,24 +107,23 @@
 									"userProperties": [],
 									"typeProperties": {
 										"source": {
-											"type": "AzureSqlSource",
-											"sqlReaderQuery": {
-												"value": "SELECT * FROM @{concat(item().TABLE_SCHEMA, '.', item().TABLE_NAME)}\n",
-												"type": "Expression"
-											},
-											"queryTimeout": "02:00:00",
-											"partitionOption": "None"
-										},
-										"sink": {
-											"type": "DelimitedTextSink",
+											"type": "DelimitedTextSource",
 											"storeSettings": {
-												"type": "AzureBlobFSWriteSettings",
-												"copyBehavior": "PreserveHierarchy"
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
 											},
 											"formatSettings": {
-												"type": "DelimitedTextWriteSettings",
-												"quoteAllText": true,
-												"fileExtension": ".txt"
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
 											}
 										},
 										"enableStaging": false,
@@ -133,22 +138,23 @@
 									},
 									"inputs": [
 										{
-											"referenceName": "ds_AzureSqlTable",
+											"referenceName": "ds_csv",
 											"type": "DatasetReference",
-											"parameters": {}
+											"parameters": {
+												"file_name": {
+													"value": "@concat(item().filename,'.csv')",
+													"type": "Expression"
+												}
+											}
 										}
 									],
 									"outputs": [
 										{
-											"referenceName": "ds_adls_delimitedtext",
+											"referenceName": "ds_Parquet",
 											"type": "DatasetReference",
 											"parameters": {
 												"filename": {
-													"value": "@{concat(item().TABLE_NAME,'.', 'csv')}",
-													"type": "Expression"
-												},
-												"tablename": {
-													"value": "@item().TABLE_NAME",
+													"value": "@concat(item().filename,'.parquet')",
 													"type": "Expression"
 												}
 											}
@@ -159,11 +165,38 @@
 						}
 					},
 					{
-						"name": "Notebook bronze to silver",
+						"name": "raw to bronze layer",
 						"type": "DatabricksNotebook",
 						"dependsOn": [
 							{
-								"activity": "ForEach",
+								"activity": "ForEach file name",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/raw to bronze"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_Databricks_Job_Cluster",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "bronze to silver layer",
+						"type": "DatabricksNotebook",
+						"dependsOn": [
+							{
+								"activity": "raw to bronze layer",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -181,16 +214,16 @@
 							"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/bronze to silver"
 						},
 						"linkedServiceName": {
-							"referenceName": "ls_AzureDatabricks",
+							"referenceName": "ls_Databricks_Job_Cluster",
 							"type": "LinkedServiceReference"
 						}
 					},
 					{
-						"name": "Notebook silver to gold",
+						"name": "silver to gold layer",
 						"type": "DatabricksNotebook",
 						"dependsOn": [
 							{
-								"activity": "Notebook bronze to silver",
+								"activity": "bronze to silver layer",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -208,7 +241,7 @@
 							"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/silver to gold"
 						},
 						"linkedServiceName": {
-							"referenceName": "ls_AzureDatabricks",
+							"referenceName": "ls_Databricks_Job_Cluster",
 							"type": "LinkedServiceReference"
 						}
 					}
@@ -219,9 +252,10 @@
 				"annotations": []
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_AzureSqlTable')]",
-				"[concat(variables('factoryId'), '/linkedServices/ls_AzureDatabricks')]",
-				"[concat(variables('factoryId'), '/datasets/ds_adls_delimitedtext')]"
+				"[concat(variables('factoryId'), '/datasets/lookupfilename')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_Databricks_Job_Cluster')]",
+				"[concat(variables('factoryId'), '/datasets/ds_csv')]",
+				"[concat(variables('factoryId'), '/datasets/ds_Parquet')]"
 			]
 		},
 		{
@@ -243,7 +277,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/ds_adls_delimitedtext')]",
+			"name": "[concat(parameters('factoryName'), '/ds_Parquet')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -254,9 +288,40 @@
 				"parameters": {
 					"filename": {
 						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().filename",
+							"type": "Expression"
+						},
+						"folderPath": "data/bronze",
+						"fileSystem": "medallionlayers"
 					},
-					"tablename": {
-						"type": "String"
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_AzureDataLakeStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_AzureDataLakeStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"file_name": {
+						"type": "string"
 					}
 				},
 				"annotations": [],
@@ -265,21 +330,73 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@dataset().filename",
+							"value": "@dataset().file_name",
 							"type": "Expression"
 						},
-						"folderPath": {
-							"value": "@dataset().tablename",
-							"type": "Expression"
-						},
-						"fileSystem": "raw"
+						"folderPath": "data/Landing",
+						"fileSystem": "medallionlayers"
 					},
 					"columnDelimiter": ",",
 					"escapeChar": "\\",
 					"firstRowAsHeader": true,
 					"quoteChar": "\""
 				},
-				"schema": []
+				"schema": [
+					{
+						"name": "customer_id",
+						"type": "String"
+					},
+					{
+						"name": "customer_unique_id",
+						"type": "String"
+					},
+					{
+						"name": "customer_zip_code_prefix",
+						"type": "String"
+					},
+					{
+						"name": "customer_city",
+						"type": "String"
+					},
+					{
+						"name": "customer_state",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_AzureDataLakeStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/lookupfilename')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_AzureDataLakeStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "lookup_filenames.csv",
+						"folderPath": "data",
+						"fileSystem": "medallionlayers"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "filename",
+						"type": "String"
+					}
+				]
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_AzureDataLakeStorage')]"
@@ -334,263 +451,29 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/medallion_pipeline_incremental_load')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
+			"name": "[concat(parameters('factoryName'), '/ls_Databricks_Job_Cluster')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
 			"properties": {
-				"activities": [
-					{
-						"name": "Lookup for tables names",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": {
-									"value": "SELECT TABLE_NAME ,TABLE_SCHEMA\nFROM INFORMATION_SCHEMA.TABLES\nWHERE TABLE_TYPE = 'BASE TABLE' and TABLE_SCHEMA='SalesLT' and TABLE_NAME != 'watermark_table'",
-									"type": "Expression"
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "ds_AzureSqlTable",
-								"type": "DatasetReference",
-								"parameters": {}
-							},
-							"firstRowOnly": false
-						}
+				"annotations": [],
+				"type": "AzureDatabricks",
+				"typeProperties": {
+					"domain": "https://adb-2752603912928373.13.azuredatabricks.net",
+					"accessToken": {
+						"type": "SecureString",
+						"value": "[parameters('ls_Databricks_Job_Cluster_accessToken')]"
 					},
-					{
-						"name": "ForEach table",
-						"type": "ForEach",
-						"dependsOn": [
-							{
-								"activity": "Lookup for tables names",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"items": {
-								"value": "@activity('Lookup for tables names').output.value",
-								"type": "Expression"
-							},
-							"isSequential": true,
-							"activities": [
-								{
-									"name": "Lookup get old watermark value",
-									"type": "Lookup",
-									"dependsOn": [],
-									"policy": {
-										"timeout": "0.12:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"source": {
-											"type": "AzureSqlSource",
-											"sqlReaderQuery": {
-												"value": "select watermarkvalue from SalesLT.watermark_table where tablename = '@{item().TABLE_NAME}'",
-												"type": "Expression"
-											},
-											"queryTimeout": "02:00:00",
-											"partitionOption": "None"
-										},
-										"dataset": {
-											"referenceName": "ds_AzureSqlTable",
-											"type": "DatasetReference",
-											"parameters": {}
-										},
-										"firstRowOnly": false
-									}
-								},
-								{
-									"name": "Lookup get new watermarkvalue from table",
-									"type": "Lookup",
-									"dependsOn": [],
-									"policy": {
-										"timeout": "0.12:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"source": {
-											"type": "AzureSqlSource",
-											"sqlReaderQuery": {
-												"value": "select max(ModifiedDate) from @{item().TABLE_SCHEMA}.@{item().TABLE_NAME}",
-												"type": "Expression"
-											},
-											"queryTimeout": "02:00:00",
-											"partitionOption": "None"
-										},
-										"dataset": {
-											"referenceName": "ds_AzureSqlTable",
-											"type": "DatasetReference",
-											"parameters": {}
-										},
-										"firstRowOnly": false
-									}
-								},
-								{
-									"name": "Copy data incrementally",
-									"type": "Copy",
-									"dependsOn": [
-										{
-											"activity": "Lookup get old watermark value",
-											"dependencyConditions": [
-												"Succeeded"
-											]
-										},
-										{
-											"activity": "Lookup get new watermarkvalue from table",
-											"dependencyConditions": [
-												"Succeeded"
-											]
-										}
-									],
-									"policy": {
-										"timeout": "0.12:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"source": {
-											"type": "AzureSqlSource",
-											"sqlReaderQuery": {
-												"value": "select * from @{item().TABLE_SCHEMA}.@{item().TABLE_NAME} where '@{activity('Lookup get old watermark value').output}'< '@{activity('Lookup get new watermarkvalue from table').output.value}'",
-												"type": "Expression"
-											},
-											"queryTimeout": "02:00:00",
-											"partitionOption": "None"
-										},
-										"sink": {
-											"type": "DelimitedTextSink",
-											"storeSettings": {
-												"type": "AzureBlobFSWriteSettings"
-											},
-											"formatSettings": {
-												"type": "DelimitedTextWriteSettings",
-												"quoteAllText": true,
-												"fileExtension": ".txt"
-											}
-										},
-										"enableStaging": false,
-										"translator": {
-											"type": "TabularTranslator",
-											"typeConversion": true,
-											"typeConversionSettings": {
-												"allowDataTruncation": true,
-												"treatBooleanAsNumber": false
-											}
-										}
-									},
-									"inputs": [
-										{
-											"referenceName": "ds_AzureSqlTable",
-											"type": "DatasetReference",
-											"parameters": {}
-										}
-									],
-									"outputs": [
-										{
-											"referenceName": "ds_adls_delimitedtext",
-											"type": "DatasetReference",
-											"parameters": {
-												"filename": {
-													"value": "@concat(item().TABLE_NAME,'.csv')",
-													"type": "Expression"
-												},
-												"tablename": {
-													"value": "@item().TABLE_NAME",
-													"type": "Expression"
-												}
-											}
-										}
-									]
-								},
-								{
-									"name": "Lookup to update watermark table",
-									"type": "Lookup",
-									"dependsOn": [
-										{
-											"activity": "Copy data incrementally",
-											"dependencyConditions": [
-												"Succeeded"
-											]
-										}
-									],
-									"policy": {
-										"timeout": "0.12:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"source": {
-											"type": "AzureSqlSource",
-											"sqlReaderStoredProcedureName": "[[dbo].[usp_write_watermark]",
-											"storedProcedureParameters": {
-												"LastModifiedtime": {
-													"type": "DateTime",
-													"value": {
-														"value": "@activity('Lookup get new watermarkvalue from table').output.value",
-														"type": "Expression"
-													}
-												},
-												"TableName": {
-													"type": "String",
-													"value": {
-														"value": "@item().TABLE_NAME",
-														"type": "Expression"
-													}
-												}
-											},
-											"queryTimeout": "02:00:00",
-											"partitionOption": "None"
-										},
-										"dataset": {
-											"referenceName": "ds_AzureSqlTable",
-											"type": "DatasetReference",
-											"parameters": {}
-										},
-										"firstRowOnly": false
-									}
-								}
-							]
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"annotations": []
+					"newClusterNodeType": "Standard_F4",
+					"newClusterNumOfWorker": "1",
+					"newClusterSparkEnvVars": {
+						"PYSPARK_PYTHON": "/databricks/python3/bin/python3"
+					},
+					"newClusterVersion": "13.3.x-scala2.12",
+					"clusterOption": "Fixed",
+					"newClusterInitScripts": []
+				}
 			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_AzureSqlTable')]",
-				"[concat(variables('factoryId'), '/datasets/ds_adls_delimitedtext')]"
-			]
+			"dependsOn": []
 		}
 	]
 }

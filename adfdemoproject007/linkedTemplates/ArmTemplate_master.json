@@ -19,6 +19,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'ls_AzureSqlDatabase'"
 		},
+		"ls_Databricks_Job_Cluster_accessToken": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accessToken' of 'ls_Databricks_Job_Cluster'"
+		},
 		"ls_AzureDataLakeStorage_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://medallionarchsa.dfs.core.windows.net/"
@@ -62,6 +66,9 @@
 					},
 					"ls_AzureSqlDatabase_connectionString": {
 						"value": "[parameters('ls_AzureSqlDatabase_connectionString')]"
+					},
+					"ls_Databricks_Job_Cluster_accessToken": {
+						"value": "[parameters('ls_Databricks_Job_Cluster_accessToken')]"
 					},
 					"ls_AzureDataLakeStorage_properties_typeProperties_url": {
 						"value": "[parameters('ls_AzureDataLakeStorage_properties_typeProperties_url')]"
