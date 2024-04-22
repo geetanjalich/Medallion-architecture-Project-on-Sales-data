@@ -147,7 +147,7 @@
 					"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/bronze to silver"
 				},
 				"linkedServiceName": {
-					"referenceName": "ls_Databricks_Job_Cluster",
+					"referenceName": "ls_AzureDatabricks",
 					"type": "LinkedServiceReference"
 				}
 			},
@@ -174,7 +174,7 @@
 					"notebookPath": "/Users/geetanjalichipurupalli@outlook.com/silver to gold"
 				},
 				"linkedServiceName": {
-					"referenceName": "ls_Databricks_Job_Cluster",
+					"referenceName": "ls_AzureDatabricks",
 					"type": "LinkedServiceReference"
 				}
 			}
