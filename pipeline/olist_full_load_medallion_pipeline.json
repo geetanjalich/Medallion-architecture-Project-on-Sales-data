@@ -34,7 +34,7 @@
 				}
 			},
 			{
-				"name": "ForEach file name",
+				"name": "copy files from Landing to bronze layer",
 				"type": "ForEach",
 				"dependsOn": [
 					{
@@ -129,7 +129,7 @@
 				"type": "DatabricksNotebook",
 				"dependsOn": [
 					{
-						"activity": "ForEach file name",
+						"activity": "copy files from Landing to bronze layer",
 						"dependencyConditions": [
 							"Succeeded"
 						]
