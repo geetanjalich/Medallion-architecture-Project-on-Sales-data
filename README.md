@@ -1,1 +1,1 @@
-# medallion-architecture-project-02
+# medallion-architecture-project
