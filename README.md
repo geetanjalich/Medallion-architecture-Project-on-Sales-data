@@ -1,5 +1,6 @@
 # Azure- Sales Data Analytics
-
+# Introduction
+The objective of this project is to analyze Sales data using a range of tools and technologies, such as ADLS Gen2 Storage, Azure DataBricks, Azure DataFactory and Azure Synapse Analytics.
 # Architecture
 ![image](https://github.com/geetanjalich/medallion-architecture-project-02/assets/79563879/834698ca-45bf-4bed-b270-4213ed918145)
 
