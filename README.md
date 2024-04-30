@@ -9,28 +9,23 @@ Medallion architecture serves different business use cases. Generally according 
 In this project,  we will use the Sales dataset. You can find the dataset  from kaggle(https://www.kaggle.com/code/barirahzainal/my-project-brazilian-e-commerce-public). The data source is available in CSV files. We assume here that the data is already in azure data lake storage (ADLS Gen2). We will orchestrate the pipeline using Azure Data Factory to take the data from the raw layer and process it further into the next layers. You can check out the hierarchy of the medallion layers in the storage account be
 
 # 2. Environment Setup
-	 If you are not familiar with the azure services . Let me give a brief overview of services we are going to use.
-	
-	 Azure Data Factory: ADF is the ETL tool used for data ingestion. 
-	 
-	 Azure Data Lake Gen 2: This is where all the data are stored.
-	
-	Azure Databricks: Azure Databricks transformed the data into the required format.
-	
-	Azure Synapse Analytics: This tool will load the Azure SQL database data.
-	
-	Power BI: To load data from Azure Synapse Analytics and Create reports for business use cases.
+If you are not familiar with the azure services . Let me give a brief overview of services we are going to use.
+Azure Data Factory: ADF is the ETL tool used for data ingestion. 
+Azure Data Lake Gen 2: This is where all the data are stored.
+Azure Databricks: Azure Databricks transformed the data into the required format.
+Azure Synapse Analytics: This tool will load the Azure SQL database data.
+Power BI: To load data from Azure Synapse Analytics and Create reports for business use cases.
 
 # 3. Data Architecture:
-	The end-to-end architecture for this project is below: We assume here the raw data is already present in landing directory in storage account in CSV format. Using Azure Data Factory we perform ingestion to bronze layer which will contain files in parquet format. Then Databricks will be used to perform data ingestion to ADLS Silver Layer, and transformation to the ADLS Gold layer. Later data will be analyzed and visualized through Synapse analytics and Power BI. Azure Data Factory will be an orchestration tool to monitor and schedule the pipeline. 
+The end-to-end architecture for this project is below: We assume here the raw data is already present in landing directory in storage account in CSV format. Using Azure Data Factory we perform ingestion to bronze layer which will contain files in parquet format. Then Databricks will be used to perform data ingestion to ADLS Silver Layer, and transformation to the ADLS Gold layer. Later data will be analyzed and visualized through Synapse analytics and Power BI. Azure Data Factory will be an orchestration tool to monitor and schedule the pipeline. 
 
  ![image](https://github.com/geetanjalich/medallion-architecture-project-02/assets/79563879/182a98d3-b625-4901-82ef-777abea61f0f)
  ![image](https://github.com/geetanjalich/medallion-architecture-project-02/assets/79563879/3fcd61f2-f624-40bb-a26c-a72f5a66a962)
 
-- Landing: We consider the data to be already present in the landing directory.
-- Bronze (Raw) : Storing your source system’s data unchanged, contain duplicates, uncleaned
-- Silver (Cleansed) : Storing deduplicated, cleansed, missing values replaced, same grain as source bronze/raw data.
-- Gold (Curated) : Storing data modelled for analysis, e.g. Star Schema, Aggregate tables. This is the highest quality data ready for reporting. You can decide on the grain you want to aggregate the data to.
+Landing: We consider the data to be already present in the landing directory.
+Bronze (Raw) : Storing your source system’s data unchanged, contain duplicates, uncleaned
+Silver (Cleansed) : Storing deduplicated, cleansed, missing values replaced, same grain as source bronze/raw data.
+Gold (Curated) : Storing data modelled for analysis, e.g. Star Schema, Aggregate tables. This is the highest quality data ready for reporting. You can decide on the grain you want to aggregate the data to.
 
 You can also have additional layers which totally depends on the requirements you have.
 Here, I have taken 3 layers into consideration: Bronze, Silver, Gold
