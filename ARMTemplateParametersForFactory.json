@@ -1,0 +1,27 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "adfdemoproject007"
+		},
+		"ls_AzureDataLakeStorage_accountKey": {
+			"value": ""
+		},
+		"ls_AzureDatabricks_accessToken": {
+			"value": ""
+		},
+		"ls_AzureSqlDatabase_connectionString": {
+			"value": ""
+		},
+		"ls_Databricks_Job_Cluster_accessToken": {
+			"value": ""
+		},
+		"ls_AzureDataLakeStorage_properties_typeProperties_url": {
+			"value": "https://medallionarchsa.dfs.core.windows.net/"
+		},
+		"ls_AzureDatabricks_properties_typeProperties_existingClusterId": {
+			"value": "0416-055521-yvgcfjiy"
+		}
+	}
+}
