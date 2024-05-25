@@ -1,5 +1,5 @@
 # 1.Problem Statement
-This dataset from Kaggle provides information of orders made at Olist Store, a Brazilian Ecommerce, from 2016 to 2018.
+This dataset from Kaggle(https://www.kaggle.com/code/barirahzainal/my-project-brazilian-e-commerce-public) provides information of orders made at Olist Store, a Brazilian Ecommerce, from 2016 to 2018.
 In this project, we will build a data pipeline to ingest and process the data using Medallion Architecture, and eventually visualise the data in PowerBI. We will build a dashboard to find out the states with the most number of orders made and the daily volume of orders from these states.
 
 # 2.Dashboard
