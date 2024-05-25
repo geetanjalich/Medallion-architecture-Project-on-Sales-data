@@ -8,6 +8,7 @@ In this project, we will build a data pipeline to ingest and process the data us
 # What is Medallion Architecture?
 
 Medallion architecture serves different business use cases. Generally according to Databricks documentation the medallion architecture consists of three main layers: Bronze, Silver, Gold. As we progress from bronze to Gold layer, the quality of data improves. Bronze layer on the other hand consists of the raw data which can be further cleaned and curated data to silver layer. Gold layer consists of highly curated data ideal for analysis purpose. A medallion architecture is built using Databricks on Data Lake. The filename will be orchestrated using Azure Data Factory pipelines. The Medallion architecture consists of three main layers: Bronze, Silver, and Gold. It aims to incrementally and progressively improve the structure and quality of data as it flows through each layer of the architecture.
+
 ![image](https://github.com/geetanjalich/Medallion-architecture-Project-on-Sales-data/assets/79563879/79eab620-cf97-4666-b975-3874379e8d4a)
 
 # 2. Environment Setup
